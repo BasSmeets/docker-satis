@@ -1,0 +1,1 @@
+0 * * * * root /satisfy/bin/satis build --working-dir=/satisfy/ --skip-errors --no-ansi -v
