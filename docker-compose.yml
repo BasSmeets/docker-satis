@@ -1,7 +1,7 @@
 version: "3"
 services:
   satis:
-    image: comviva/docker-satis:3.5.1
+    image: bassmeets/docker-satis:3.5.1
     build: ./
     container_name: docker-satis
     ports:
@@ -10,6 +10,8 @@ services:
       - ./config/satis.json:/satisfy/satis.json
       - ./config/parameters.yml:/satisfy/app/config/parameters.yml
       - ./ssh/id_rsa:/tmp/id_rsa
+      # - ./nginx/nginx.conf /etc/nginx/http.d/satis.conf OPTIONAL
     environment:
-      CRONTAB_FREQUENCY: "*/10 * * * *"
+      CRONTAB_FREQUENCY: "*/2 * * * *"
       PRIVATE_REPO_DOMAIN_LIST: bitbucket.org
+      TZ: Europe/Amsterdam

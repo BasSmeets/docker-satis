@@ -23,6 +23,14 @@ function end_of_script() {
 
   exit 0;
 }
+
+# Replace the frequency of a crontab entry
+set_cron() {
+  local cmd="sudo -u www -H sh -c '/satisfy/bin/satis build --working-dir=/satisfy/ --skip-errors --no-ansi'"
+  local new_frequency=$1
+  (echo "${new_frequency} ${cmd}")| crontab -
+}
+
 trap 'end_of_script' INT TERM EXIT QUIT
 
 # Reset
@@ -33,22 +41,8 @@ Red='\033[0;31m'          # Red
 Green='\033[0;32m'        # Green
 Yellow='\033[0;33m'       # Yellow
 
-DEFAULT_CRONTAB_FREQUENCY="0 * * * *" # once an hour
-DEFAULT_CRONTAB_FREQUENCY_ESCAPED=$(printf '%s\n' "${DEFAULT_CRONTAB_FREQUENCY}" | sed 's/[[\.*^$/]/\\&/g')
-
-[[ -z "${CRONTAB_FREQUENCY}" ]] && CRONTAB_FREQUENCY="$DEFAULT_CRONTAB_FREQUENCY"
-CRONTAB_FREQUENCY_ESCAPED=$(printf '%s\n' "${CRONTAB_FREQUENCY}" | sed 's/[[\.*^$/]/\\&/g')
-
-STEP="CRONTAB"
-if [[ ${CRONTAB_FREQUENCY} == -1 ]]; then
-  echo " >>> No Cron, removing crontab file"
-  test -e /etc/cron.d/satis-cron && rm -rf /etc/cron.d/satis-cron && ls -alh /etc/cron.d
-else
-  echo " >>> Crontab frequency set to: ${CRONTAB_FREQUENCY}"
-  sed -i "s/${DEFAULT_CRONTAB_FREQUENCY_ESCAPED}/${CRONTAB_FREQUENCY_ESCAPED}/g" /etc/cron.d/satis-cron
-  echo " >>> Replacing ${DEFAULT_CRONTAB_FREQUENCY_ESCAPED} BY ${CRONTAB_FREQUENCY_ESCAPED}"
-  cat /etc/cron.d/satis-cron | grep "${CRONTAB_FREQUENCY_ESCAPED}" && echo "CRONTAB REPLACE OK"
-fi
+STEP="CRON"
+set_cron "${CRONTAB_FREQUENCY}"
 
 STEP="SSH"
 touch ${USER_HOME}/.ssh/known_hosts
@@ -70,15 +64,13 @@ for _DOMAIN in ${PRIVATE_REPO_DOMAIN_LIST} ; do
 done
 
 echo " >>> Copy ssh key to directory and assign permissions"
-cp /tmp/id_rsa "${USER_HOME}/.ssh/id_rsa" && chmod 600 "${USER_HOME}/.ssh/id_rsa"
+cp /tmp/id_rsa "${USER_HOME}/.ssh/id_rsa" && chmod 600 "${USER_HOME}/.ssh/id_rsa" && chown ${USER}:${USER} "${USER_HOME}/.ssh/id_rsa"
 
-STEP="FIRST BUILD"
+STEP="BUILD"
 if [[ ! -f /satisfy/public/packages.json ]]; then
-  /satisfy/bin/satis build --working-dir=/satisfy/ --skip-errors --no-ansi -vv
+   sudo -u www -H sh -c "/satisfy/bin/satis build --working-dir=/satisfy/ --skip-errors --no-ansi"
 fi
-
-
 
 STEP="END"
 
-exit 0
+exec "$@"
